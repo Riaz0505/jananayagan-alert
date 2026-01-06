@@ -1,25 +1,22 @@
-const { chromium } = require("playwright");
 const axios = require("axios");
 
 // ================= CONFIG =================
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
 
-// Movie keywords (space issue avoid panna split use pannrom)
+// Movie + city
 const MOVIE_WORDS = ["jana", "nayagan"];
 const CITY = "tirupur";
 
-// BookMyShow – Jana Nayagan movie detail page
-// (Cloud-la run aagum, unga PC block issue illa)
-const BMS_MOVIE_URL =
-  "https://in.bookmyshow.com/movies/tiruchirappalli/jana-nayagan/ET00430817";
+// BookMyShow showtimes API (CITY BASED)
+const BMS_SHOWTIME_API =
+  "https://in.bookmyshow.com/api/explore/v1/showtimes/tirupur";
 
 // Ticket platforms
 const TICKETNEW_URL =
   "https://www.ticketnew.com/Online-Ticket-Booking/Cinemas";
 const DISTRICT_URL = "https://www.district.in/movies";
 
-// Interval – 2 minutes (safe)
 const INTERVAL = 2 * 60 * 1000;
 // =========================================
 
@@ -41,7 +38,6 @@ async function sendOnce(message) {
   if (alertSent) return;
   alertSent = true;
   await sendTelegram(message);
-  console.log("ALERT SENT. BOT STOPPED.");
   process.exit(0);
 }
 
@@ -50,38 +46,26 @@ function movieMatch(text) {
   return MOVIE_WORDS.every((w) => text.includes(w));
 }
 
-// ---------- BOOKMYSHOW ----------
+// ---------- BOOKMYSHOW (REAL FIX) ----------
 async function checkBMS() {
-  console.log("Checking BookMyShow movie page...");
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
-
+  console.log("Checking BookMyShow SHOWTIMES (Tirupur)...");
   try {
-    await page.goto(BMS_MOVIE_URL, {
-      waitUntil: "domcontentloaded",
-      timeout: 60000,
-    });
+    const res = await axios.get(BMS_SHOWTIME_API, { timeout: 20000 });
+    const data = JSON.stringify(res.data).toLowerCase();
 
-    const html = (await page.content()).toLowerCase();
-
-    // Book Tickets button real-ah irukka?
-    const bookBtn = await page.$('button:has-text("Book")');
-
-    if (movieMatch(html) && bookBtn) {
+    if (movieMatch(data)) {
       await sendOnce(
         "🎬 JANA NAYAGAN TICKET OPEN 🔥\n" +
         "📍 City: Tirupur\n" +
         "🎟️ Platform: BookMyShow\n" +
-        "⚡ Book FAST!"
+        "⚡ Showtimes LIVE!"
       );
     } else {
       console.log("BMS: Not open yet...");
     }
   } catch (e) {
-    console.log("BMS check skipped");
+    console.log("BMS API check skipped");
   }
-
-  await browser.close();
 }
 
 // ---------- TICKETNEW ----------
@@ -95,8 +79,7 @@ async function checkTicketNew() {
       await sendOnce(
         "🎬 JANA NAYAGAN TICKET OPEN 🔥\n" +
         "📍 City: Tirupur\n" +
-        "🎟️ Platform: TicketNew\n" +
-        "⚡ Book FAST!"
+        "🎟️ Platform: TicketNew"
       );
     } else {
       console.log("TicketNew: Not open yet...");
@@ -117,8 +100,7 @@ async function checkDistrict() {
       await sendOnce(
         "🎬 JANA NAYAGAN TICKET OPEN 🔥\n" +
         "📍 City: Tirupur\n" +
-        "🎟️ Platform: District\n" +
-        "⚡ Book FAST!"
+        "🎟️ Platform: District"
       );
     } else {
       console.log("District: Not open yet...");
