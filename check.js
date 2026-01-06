@@ -5,20 +5,22 @@ const axios = require("axios");
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
 
-// City & movie keywords (IMPORTANT)
+// Movie keywords (space issue avoid panna split use pannrom)
+const MOVIE_WORDS = ["jana", "nayagan"];
 const CITY = "tirupur";
-const MOVIE_KEYWORDS = ["jana", "nayagan"];
 
-// BookMyShow MOVIE PAGE (PASTE REAL URL HERE)
+// BookMyShow – Jana Nayagan movie detail page
+// (Cloud-la run aagum, unga PC block issue illa)
 const BMS_MOVIE_URL =
-  "https://in.bookmyshow.com/movies/jana-nayagan/ET003XXXXX"; 
-// 👆 IMPORTANT: Replace ET003XXXXX with real one
+  "https://in.bookmyshow.com/movies/tiruchirappalli/jana-nayagan/ET00430817";
 
 // Ticket platforms
-const TICKETNEW_URL = "https://www.ticketnew.com/Online-Ticket-Booking/Cinemas";
+const TICKETNEW_URL =
+  "https://www.ticketnew.com/Online-Ticket-Booking/Cinemas";
 const DISTRICT_URL = "https://www.district.in/movies";
 
-const INTERVAL = 2 * 60 * 1000; // 2 minutes (SAFE)
+// Interval – 2 minutes (safe)
+const INTERVAL = 2 * 60 * 1000;
 // =========================================
 
 let alertSent = false;
@@ -39,13 +41,13 @@ async function sendOnce(message) {
   if (alertSent) return;
   alertSent = true;
   await sendTelegram(message);
-  console.log("ALERT SENT. STOPPING BOT.");
+  console.log("ALERT SENT. BOT STOPPED.");
   process.exit(0);
 }
 
 // ---------- HELPER ----------
 function movieMatch(text) {
-  return MOVIE_KEYWORDS.every((k) => text.includes(k));
+  return MOVIE_WORDS.every((w) => text.includes(w));
 }
 
 // ---------- BOOKMYSHOW ----------
@@ -60,12 +62,12 @@ async function checkBMS() {
       timeout: 60000,
     });
 
-    const text = (await page.content()).toLowerCase();
+    const html = (await page.content()).toLowerCase();
 
-    // Movie match + Book button
+    // Book Tickets button real-ah irukka?
     const bookBtn = await page.$('button:has-text("Book")');
 
-    if (movieMatch(text) && bookBtn) {
+    if (movieMatch(html) && bookBtn) {
       await sendOnce(
         "🎬 JANA NAYAGAN TICKET OPEN 🔥\n" +
         "📍 City: Tirupur\n" +
@@ -76,7 +78,7 @@ async function checkBMS() {
       console.log("BMS: Not open yet...");
     }
   } catch (e) {
-    console.log("BMS error skipped");
+    console.log("BMS check skipped");
   }
 
   await browser.close();
