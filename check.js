@@ -1,17 +1,25 @@
 const { chromium } = require("playwright");
 const axios = require("axios");
 
-// ================== CONFIG ==================
+// ================= CONFIG =================
 const BOT_TOKEN = process.env.BOT_TOKEN;
 const CHAT_ID = process.env.CHAT_ID;
 
-// Tiruppur focus
-const BMS_URL = "https://in.bookmyshow.com/explore/movies-tiruppur";
+// City & movie keywords (IMPORTANT)
+const CITY = "tirupur";
+const MOVIE_KEYWORDS = ["jana", "nayagan"];
+
+// BookMyShow MOVIE PAGE (PASTE REAL URL HERE)
+const BMS_MOVIE_URL =
+  "https://in.bookmyshow.com/movies/jana-nayagan/ET003XXXXX"; 
+// 👆 IMPORTANT: Replace ET003XXXXX with real one
+
+// Ticket platforms
 const TICKETNEW_URL = "https://www.ticketnew.com/Online-Ticket-Booking/Cinemas";
 const DISTRICT_URL = "https://www.district.in/movies";
 
 const INTERVAL = 2 * 60 * 1000; // 2 minutes (SAFE)
-// ============================================
+// =========================================
 
 let alertSent = false;
 
@@ -31,33 +39,36 @@ async function sendOnce(message) {
   if (alertSent) return;
   alertSent = true;
   await sendTelegram(message);
-  console.log("ALERT SENT. Stopping bot.");
+  console.log("ALERT SENT. STOPPING BOT.");
   process.exit(0);
+}
+
+// ---------- HELPER ----------
+function movieMatch(text) {
+  return MOVIE_KEYWORDS.every((k) => text.includes(k));
 }
 
 // ---------- BOOKMYSHOW ----------
 async function checkBMS() {
-  console.log("Checking BookMyShow Tiruppur...");
+  console.log("Checking BookMyShow movie page...");
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage();
 
   try {
-    await page.goto(BMS_URL, {
+    await page.goto(BMS_MOVIE_URL, {
       waitUntil: "domcontentloaded",
       timeout: 60000,
     });
 
-    const text = await page.evaluate(() =>
-      document.body.innerText.toLowerCase()
-    );
+    const text = (await page.content()).toLowerCase();
 
-    if (
-      text.includes("jananayagan") &&
-      text.includes("book")
-    ) {
+    // Movie match + Book button
+    const bookBtn = await page.$('button:has-text("Book")');
+
+    if (movieMatch(text) && bookBtn) {
       await sendOnce(
-        "🎬 JANANAYAGAN TICKET OPEN 🔥\n" +
-        "📍 Tiruppur\n" +
+        "🎬 JANA NAYAGAN TICKET OPEN 🔥\n" +
+        "📍 City: Tirupur\n" +
         "🎟️ Platform: BookMyShow\n" +
         "⚡ Book FAST!"
       );
@@ -78,10 +89,10 @@ async function checkTicketNew() {
     const res = await axios.get(TICKETNEW_URL, { timeout: 20000 });
     const html = res.data.toLowerCase();
 
-    if (html.includes("jananayagan")) {
+    if (movieMatch(html) && html.includes(CITY)) {
       await sendOnce(
-        "🎬 JANANAYAGAN TICKET OPEN 🔥\n" +
-        "📍 Tiruppur\n" +
+        "🎬 JANA NAYAGAN TICKET OPEN 🔥\n" +
+        "📍 City: Tirupur\n" +
         "🎟️ Platform: TicketNew\n" +
         "⚡ Book FAST!"
       );
@@ -89,7 +100,7 @@ async function checkTicketNew() {
       console.log("TicketNew: Not open yet...");
     }
   } catch (e) {
-    console.log("TicketNew check skipped");
+    console.log("TicketNew skipped");
   }
 }
 
@@ -100,10 +111,10 @@ async function checkDistrict() {
     const res = await axios.get(DISTRICT_URL, { timeout: 20000 });
     const html = res.data.toLowerCase();
 
-    if (html.includes("jananayagan")) {
+    if (movieMatch(html) && html.includes(CITY)) {
       await sendOnce(
-        "🎬 JANANAYAGAN TICKET OPEN 🔥\n" +
-        "📍 Tiruppur\n" +
+        "🎬 JANA NAYAGAN TICKET OPEN 🔥\n" +
+        "📍 City: Tirupur\n" +
         "🎟️ Platform: District\n" +
         "⚡ Book FAST!"
       );
@@ -111,7 +122,7 @@ async function checkDistrict() {
       console.log("District: Not open yet...");
     }
   } catch (e) {
-    console.log("District check skipped");
+    console.log("District skipped");
   }
 }
 
